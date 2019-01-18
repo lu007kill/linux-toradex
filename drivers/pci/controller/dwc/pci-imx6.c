@@ -814,7 +814,7 @@ static void imx6_pcie_ltssm_disable(struct device *dev)
 {
 	struct imx6_pcie *imx6_pcie = dev_get_drvdata(dev);
 
-	switch (imx6_pcie->variant) {
+	switch (imx6_pcie->drvdata->variant) {
 	case IMX6SX:
 	case IMX6QP:
 		regmap_update_bits(imx6_pcie->iomuxc_gpr, IOMUXC_GPR12,
@@ -849,7 +849,7 @@ static void imx6_pcie_clk_disable(struct imx6_pcie *imx6_pcie)
 	clk_disable_unprepare(imx6_pcie->pcie_phy);
 	clk_disable_unprepare(imx6_pcie->pcie_bus);
 
-	if (imx6_pcie->variant == IMX7D) {
+	if (imx6_pcie->drvdata->variant == IMX7D) {
 		regmap_update_bits(imx6_pcie->iomuxc_gpr, IOMUXC_GPR12,
 				   IMX7D_GPR12_PCIE_PHY_REFCLK_SEL,
 				   IMX7D_GPR12_PCIE_PHY_REFCLK_SEL);
@@ -860,7 +860,7 @@ static int imx6_pcie_suspend_noirq(struct device *dev)
 {
 	struct imx6_pcie *imx6_pcie = dev_get_drvdata(dev);
 
-	if (imx6_pcie->variant != IMX7D)
+	if (imx6_pcie->drvdata->variant != IMX7D)
 		return 0;
 
 	imx6_pcie_pm_turnoff(imx6_pcie);
@@ -876,7 +876,7 @@ static int imx6_pcie_resume_noirq(struct device *dev)
 	struct imx6_pcie *imx6_pcie = dev_get_drvdata(dev);
 	struct pcie_port *pp = &imx6_pcie->pci->pp;
 
-	if (imx6_pcie->variant != IMX7D)
+	if (imx6_pcie->drvdata->variant != IMX7D)
 		return 0;
 
 	imx6_pcie_assert_core_reset(imx6_pcie);
