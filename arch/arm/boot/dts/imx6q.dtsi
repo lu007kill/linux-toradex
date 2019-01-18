@@ -537,6 +537,13 @@
 			<0x28 0x0000000c>; /* DCIC2_MUX_CTL */
 };
 
+&pmu {
+	interrupt-affinity = <&{/cpus/cpu@0}>,
+			     <&{/cpus/cpu@1}>,
+			     <&{/cpus/cpu@2}>,
+			     <&{/cpus/cpu@3}>;
+};
+
 &vpu {
 	compatible = "fsl,imx6q-vpu", "cnm,coda960";
 };
