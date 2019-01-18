@@ -84,3 +84,7 @@
 		>;
 	};
 };
+
+&pmu {
+	interrupt-affinity = <&{/cpus/cpu@0}>;
+};

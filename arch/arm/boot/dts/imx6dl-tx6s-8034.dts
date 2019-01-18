@@ -68,3 +68,7 @@
 		MX6QDL_PAD_SD3_CMD__GPIO7_IO02		0x170b0 /* SD1 CD */
 	>;
 };
+
+&pmu {
+	interrupt-affinity = <&{/cpus/cpu@0}>;
+};
