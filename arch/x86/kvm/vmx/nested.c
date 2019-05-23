@@ -2793,7 +2793,7 @@ static int nested_vmx_check_vmentry_hw(struct kvm_vcpu *vcpu)
 		[fail]"i"(offsetof(struct vcpu_vmx, fail)),
 		[host_rsp]"i"(offsetof(struct vcpu_vmx, host_rsp)),
 		[wordsize]"i"(sizeof(ulong))
-	      : "rax", "cc", "memory"
+	      : "cc", "memory"
 	);
 
 	preempt_enable();
@@ -3790,8 +3790,18 @@ static void nested_vmx_restore_host_state(struct kvm_vcpu *vcpu)
 	vmx_set_cr4(vcpu, vmcs_readl(CR4_READ_SHADOW));
 
 	nested_ept_uninit_mmu_context(vcpu);
-	vcpu->arch.cr3 = vmcs_readl(GUEST_CR3);
-	__set_bit(VCPU_EXREG_CR3, (ulong *)&vcpu->arch.regs_avail);
+
+	/*
+	 * This is only valid if EPT is in use, otherwise the vmcs01 GUEST_CR3
+	 * points to shadow pages!  Fortunately we only get here after a WARN_ON
+	 * if EPT is disabled, so a VMabort is perfectly fine.
+	 */
+	if (enable_ept) {
+		vcpu->arch.cr3 = vmcs_readl(GUEST_CR3);
+		__set_bit(VCPU_EXREG_CR3, (ulong *)&vcpu->arch.regs_avail);
+	} else {
+		nested_vmx_abort(vcpu, VMX_ABORT_VMCS_CORRUPTED);
+	}
 
 	/*
 	 * Use ept_save_pdptrs(vcpu) to load the MMU's cached PDPTRs
@@ -5407,7 +5417,7 @@ static int vmx_set_nested_state(struct kvm_vcpu *vcpu,
 		return ret;
 
 	/* Empty 'VMXON' state is permitted */
-	if (kvm_state->size < sizeof(kvm_state) + sizeof(*vmcs12))
+	if (kvm_state->size < sizeof(*kvm_state) + sizeof(*vmcs12))
 		return 0;
 
 	if (kvm_state->vmx.vmcs_pa != -1ull) {
@@ -5451,7 +5461,7 @@ static int vmx_set_nested_state(struct kvm_vcpu *vcpu,
 	    vmcs12->vmcs_link_pointer != -1ull) {
 		struct vmcs12 *shadow_vmcs12 = get_shadow_vmcs12(vcpu);
 
-		if (kvm_state->size < sizeof(kvm_state) + 2 * sizeof(*vmcs12))
+		if (kvm_state->size < sizeof(*kvm_state) + 2 * sizeof(*vmcs12))
 			return -EINVAL;
 
 		if (copy_from_user(shadow_vmcs12,
@@ -5738,6 +5748,14 @@ void nested_vmx_hardware_unsetup(void)
 __init int nested_vmx_hardware_setup(int (*exit_handlers[])(struct kvm_vcpu *))
 {
 	int i;
+
+	/*
+	 * Without EPT it is not possible to restore L1's CR3 and PDPTR on
+	 * VMfail, because they are not available in vmcs01.  Just always
+	 * use hardware checks.
+	 */
+	if (!enable_ept)
+		nested_early_check = 1;
 
 	if (!cpu_has_vmx_shadow_vmcs())
 		enable_shadow_vmcs = 0;
