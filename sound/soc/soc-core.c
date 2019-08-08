@@ -2076,10 +2076,12 @@ static int snd_soc_instantiate_card(struct snd_soc_card *card)
 	mutex_lock(&client_mutex);
 	for_each_card_prelinks(card, i, dai_link) {
 		ret = soc_init_dai_link(card, dai_link);
-		if (ret) {
-			soc_cleanup_platform(card);
+		if (ret && ret != -EPROBE_DEFER) {
 			dev_err(card->dev, "ASoC: failed to init link %s: %d\n",
 				dai_link->name, ret);
+		}
+		if (ret) {
+			soc_cleanup_platform(card);
 			mutex_unlock(&client_mutex);
 			return ret;
 		}
