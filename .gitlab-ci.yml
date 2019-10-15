@@ -45,17 +45,20 @@ stages:
     version=$( cat index.html| grep ^"<a" | sed -e 's/[<>="//]/ /g' | awk '{ print $3}' | sort -nrk1,1 | head -1)
     wget http://10.1.8.33:83/image-oe-torizon-master-matrix/Nightly/artifacts/$version/$KERNEL_FILE_PATH/images/kernel-config 
     mkdir -p $TEMP_BUILD_FOLDER
-    mv kernel-config $TEMP_BUILD_FOLDER/$KERNEL_CONFIGURATION_FILE
+    cp kernel-config $TEMP_BUILD_FOLDER/$KERNEL_CONFIGURATION_FILE
     ##### 
     make O=$TEMP_BUILD_FOLDER -j3 2>&1 | tee $KERNEL_BUILD_LOG_FILE_NAME
   artifacts:
     when: always
     name: "$CI_COMMIT_REF_NAME" 
     paths:
-      - $KERNEL_CONFIG_BUILD_LOG_FILE_NAME
       - $KERNEL_BUILD_LOG_FILE_NAME
-      - $KERNEL_CONFIGURATION_FILE
+      #As we do not generate config for 5.x and use generated one,  we have just kernel config and kernel build log
+      - kernel-config
   allow_failure: true
+  after_script:
+    - set -o xtrace
+    - rm -rf $TEMP_BUILD_FOLDER
 
       # If you need additional products build just copy-paste build_******_product section with new config name 
 build_default_defconfig :
